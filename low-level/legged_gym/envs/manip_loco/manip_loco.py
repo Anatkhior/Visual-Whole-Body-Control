@@ -622,12 +622,19 @@ class ManipLoco(LeggedRobot):
             camera_props = gymapi.CameraProperties()
             camera_props.width = 720
             camera_props.height = 480
+            camera_props.horizontal_fov = 45.0
             self._rendering_camera_handles = []
+            self._recording_camera_initialized = False
             for i in range(self.num_envs):
                 # root_pos = self.root_states[i, :3].cpu().numpy()
                 # cam_pos = root_pos + np.array([0, 1, 0.5])
                 cam_pos = np.array([0, 1, 0.5])
                 camera_handle = self.gym.create_camera_sensor(self.envs[i], camera_props)
+                if camera_handle < 0:
+                    raise RuntimeError(
+                        "Failed to create Isaac Gym camera sensor for video recording. "
+                        "Use a non-negative graphics_device_id when --record_video is enabled."
+                    )
                 self._rendering_camera_handles.append(camera_handle)
                 self.gym.set_camera_location(camera_handle, self.envs[i], gymapi.Vec3(*cam_pos), gymapi.Vec3(*0*cam_pos))
     
@@ -1302,18 +1309,41 @@ class ManipLoco(LeggedRobot):
 
     def render_record(self, mode="rgb_array"):
         if self.global_steps % 2 == 0:
-            self.gym.step_graphics(self.sim)
-            self.gym.render_all_camera_sensors(self.sim)
             imgs = []
             for i in range(self.num_envs):
                 cam = self._rendering_camera_handles[i]
-                root_pos = self.root_states[i, :3].cpu().numpy()
-                cam_pos = root_pos + np.array([0, 2, 1])
-                self.gym.set_camera_location(cam, self.envs[i], gymapi.Vec3(*cam_pos), gymapi.Vec3(*root_pos))
-                
+                if cam < 0:
+                    raise RuntimeError(f"Invalid camera handle for env {i}: {cam}")
+                if not self._recording_camera_initialized:
+                    root_pos = self.root_states[i, :3].cpu().numpy()
+                    cam_pos = root_pos + np.array([-2.2, 2.2, 1.3])
+                    lookat_pos = root_pos + np.array([0.0, 0.0, 0.35])
+                    self.gym.set_camera_location(
+                        cam,
+                        self.envs[i],
+                        gymapi.Vec3(*cam_pos),
+                        gymapi.Vec3(*lookat_pos),
+                    )
+            self._recording_camera_initialized = True
+
+            self.gym.fetch_results(self.sim, True)
+            self.gym.step_graphics(self.sim)
+            self.gym.render_all_camera_sensors(self.sim)
+
+            for i in range(self.num_envs):
+                cam = self._rendering_camera_handles[i]
                 img = self.gym.get_camera_image(self.sim, self.envs[i], cam, gymapi.IMAGE_COLOR)
-                w, h = img.shape
-                imgs.append(img.reshape([w, h // 4, 4]))
+                img = np.asarray(img)
+                if img.ndim == 2:
+                    height, width_channels = img.shape
+                    if height <= 0 or width_channels <= 0 or width_channels % 4 != 0:
+                        raise RuntimeError(f"Invalid camera image shape for env {i}: {img.shape}")
+                    img = img.reshape(height, width_channels // 4, 4)
+                elif img.ndim != 3 or img.shape[2] != 4:
+                    raise RuntimeError(f"Unexpected camera image shape for env {i}: {img.shape}")
+                if img.shape[0] <= 0 or img.shape[1] <= 0:
+                    raise RuntimeError(f"Empty camera image for env {i}: {img.shape}")
+                imgs.append(np.ascontiguousarray(img[:, :, :3]))
             return imgs
         return None
 

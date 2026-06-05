@@ -267,127 +267,127 @@ def get_trainer(is_eval=False):
             cfg["env"]["globalStepCounter"] = checkpoint_steps
     env = create_env(cfg=cfg, args=args, mode=mode)
     device = env.rl_device
-    memory = RandomMemory(memory_size=24, num_envs=env.num_envs, device=device)
+    memory = RandomMemory(memory_size=24, num_envs=env.num_envs, device=device)  # DAgger 聚合数据的短期缓冲区；rollouts=24 时每 24 步更新一次。
 
-    student_action_space = env.action_space
-    student_obs_space = env.observation_space
+    student_action_space = env.action_space  # student 最终要输出和 teacher 相同维度的高层动作。
+    student_obs_space = env.observation_space  # wrapper 暴露给 student policy 的观测空间。
     if args.pred_success:
-        student_action_space = (student_action_space.shape[0]+1,)
+        student_action_space = (student_action_space.shape[0]+1,)  # pred_success 会让 student 多输出 1 维 lifted/success 预测。
     
-    model_dagger = {}
-    model_dagger["policy"] = Policy(student_obs_space, student_action_space, device, num_envs=env.num_envs, mode=mode, use_roboinfo=use_roboinfo, use_tanh=args.use_tanh, use_gru=not args.mlp_stu, pitch_control=args.pitch_control, floating_base=cfg["env"].get("floatingBase", False))
+    model_dagger = {}  # skrl agent 需要用字典传入模型。
+    model_dagger["policy"] = Policy(student_obs_space, student_action_space, device, num_envs=env.num_envs, mode=mode, use_roboinfo=use_roboinfo, use_tanh=args.use_tanh, use_gru=not args.mlp_stu, pitch_control=args.pitch_control, floating_base=cfg["env"].get("floatingBase", False))  # student 视觉策略；默认 use_gru=True，除非命令行加 --mlp_stu。
     
-    dagger_config = DAGGER_DEFAULT_CONFIG if args.mlp_stu else DAGGER_RNN_DEFAULT_CONFIG
+    dagger_config = DAGGER_DEFAULT_CONFIG if args.mlp_stu else DAGGER_RNN_DEFAULT_CONFIG  # MLP student 用 DAgger，GRU student 用 DAgger_RNN。
     
-    cfg_dagger = dagger_config.copy()
-    cfg_dagger["rollouts"] = 24  # memory_size
-    cfg_dagger["learning_epochs"] = 5
-    cfg_dagger["mini_batches"] = 3  # 24 * 8192 / 32768
-    cfg_dagger["discount_factor"] = 0.99
-    cfg_dagger["lambda"] = 0.95
-    cfg_dagger["learning_rate"] = 5e-5
-    cfg_dagger["learning_rate_scheduler"] = None
+    cfg_dagger = dagger_config.copy()  # 复制默认 DAgger 配置，下面按当前实验覆盖关键超参。
+    cfg_dagger["rollouts"] = 24  # memory_size；每收集 24 个 step 的聚合数据后触发一次 student 更新。
+    cfg_dagger["learning_epochs"] = 5  # 每次更新重复遍历 memory 数据 5 轮。
+    cfg_dagger["mini_batches"] = 3  # 24 * 8192 / 32768；把一次收集的数据分成 3 个 mini-batch。
+    cfg_dagger["discount_factor"] = 0.99  # 兼容 skrl/PPO 字段；当前 DAgger MSE 不直接使用。
+    cfg_dagger["lambda"] = 0.95  # 兼容 skrl/PPO 字段；当前 DAgger MSE 不直接使用。
+    cfg_dagger["learning_rate"] = 5e-5  # student policy 的 Adam 学习率。
+    cfg_dagger["learning_rate_scheduler"] = None  # DAgger 训练中不启用学习率调度。
     # cfg_dagger["learning_rate_scheduler_kwargs"] = {"kl_threshold": 0.008}
-    cfg_dagger["random_timesteps"] = 0
-    cfg_dagger["learning_starts"] = 0
-    cfg_dagger["grad_norm_clip"] = 1.0
-    cfg_dagger["ratio_clip"] = 0.2
-    cfg_dagger["value_clip"] = 0.2
-    cfg_dagger["clip_predicted_values"] = True
-    cfg_dagger["value_loss_scale"] = 1.0
-    cfg_dagger["kl_threshold"] = 0
-    cfg_dagger["rewards_shaper"] = None
+    cfg_dagger["random_timesteps"] = 0  # 不使用随机动作阶段；student 从第一步就输出自己的动作。
+    cfg_dagger["learning_starts"] = 0  # 不额外延迟更新；memory 满一个 rollouts 后即可训练。
+    cfg_dagger["grad_norm_clip"] = 1.0  # student 反向传播时的梯度裁剪阈值。
+    cfg_dagger["ratio_clip"] = 0.2  # 兼容 skrl/PPO 字段；当前 DAgger loss 不直接使用。
+    cfg_dagger["value_clip"] = 0.2  # 兼容 skrl/PPO 字段；当前没有 value loss。
+    cfg_dagger["clip_predicted_values"] = True  # 兼容 skrl/PPO 字段；当前没有 value prediction。
+    cfg_dagger["value_loss_scale"] = 1.0  # 兼容 skrl/PPO 字段；当前没有 value loss。
+    cfg_dagger["kl_threshold"] = 0  # KL 早停关闭；当前 DAgger 更新中 KL 计算也未启用。
+    cfg_dagger["rewards_shaper"] = None  # 不对 reward 做 shaping；DAgger 核心 loss 是动作 MSE。
     # logging to TensorBoard and write checkpoints each 120 and 1200 timesteps respectively
-    cfg_dagger["experiment"]["write_interval"] = 24
-    cfg_dagger["experiment"]["checkpoint_interval"] = 1000
-    cfg_dagger["experiment"]["directory"] = args.experiment_dir
-    cfg_dagger["experiment"]["experiment_name"] = args.wandb_name
-    cfg_dagger["experiment"]["wandb"] = args.wandb
+    cfg_dagger["experiment"]["write_interval"] = 24  # 每 24 步写一次日志。
+    cfg_dagger["experiment"]["checkpoint_interval"] = 1000  # 每 1000 步保存一次 student checkpoint。
+    cfg_dagger["experiment"]["directory"] = args.experiment_dir  # checkpoint/log 的父目录。
+    cfg_dagger["experiment"]["experiment_name"] = args.wandb_name  # 实验名，也用于日志目录名。
+    cfg_dagger["experiment"]["wandb"] = args.wandb  # 是否同步到 W&B。
     # Train a fixed base policy
-    cfg_dagger["fixed_base"] = args.fixed_base
-    cfg_dagger["reach_only"] = args.reach_only
-    cfg_dagger["pred_success"] = args.pred_success
+    cfg_dagger["fixed_base"] = args.fixed_base  # 传给 DAgger loss：固定底盘时忽略最后 2 个动作维度。
+    cfg_dagger["reach_only"] = args.reach_only  # 传给 DAgger loss：只训练 reach 相关动作维度。
+    cfg_dagger["pred_success"] = args.pred_success  # 传给 DAgger loss：额外监督 lifted/success 预测。
     if args.wandb:
-        cfg_dagger["experiment"]["wandb_kwargs"] = {"project": args.wandb_project, "tensorboard": False, "name": args.wandb_name}
+        cfg_dagger["experiment"]["wandb_kwargs"] = {"project": args.wandb_project, "tensorboard": False, "name": args.wandb_name}  # W&B 项目名和 run 名配置。
     
     if args.mlp_stu:
         agent = DAgger(models=model_dagger,
-                    memory=memory,
-                    cfg=cfg_dagger,
-                    observation_space=student_obs_space,
-                    action_space=env.action_space,
-                    state_space=env.state_space,
-                    device=device)
+                    memory=memory,  # 保存 student_obs、teacher_actions 等 DAgger 训练样本。
+                    cfg=cfg_dagger,  # 上面配置好的 DAgger 超参。
+                    observation_space=student_obs_space,  # teacher_obs 记录空间；skrl agent 的 observation_space 字段。
+                    action_space=env.action_space,  # teacher/student 对齐的动作空间。
+                    state_space=env.state_space,  # student_obs 空间；DAgger.update 时实际喂给 student policy。
+                    device=device)  # 训练设备，通常是 cuda。
     else:
         agent = DAgger_RNN(models=model_dagger,
-                memory=memory,
-                cfg=cfg_dagger,
-                observation_space=student_obs_space,
-                action_space=env.action_space,
-                state_space=env.state_space,
-                device=device)
+                memory=memory,  # 保存 student_obs、teacher_actions，以及 GRU hidden state。
+                cfg=cfg_dagger,  # 上面配置好的 RNN DAgger 超参。
+                observation_space=student_obs_space,  # teacher_obs 记录空间；skrl agent 的 observation_space 字段。
+                action_space=env.action_space,  # teacher/student 对齐的动作空间。
+                state_space=env.state_space,  # student_obs 空间；DAgger_RNN.update 时实际喂给 student policy。
+                device=device)  # 训练设备，通常是 cuda。
     
     from train_multistate import Policy as PPOPolicy
     from train_multistate import Value as PPOValue
     from train_multistate import PPO_DEFAULT_CONFIG, PPO
 
-    teacher_action_space = env.action_space
-    teacher_obs_space = env.observation_space
+    teacher_action_space = env.action_space  # teacher 输出的动作空间，必须和 student 要模仿的动作空间一致。
+    teacher_obs_space = env.observation_space  # teacher 输入空间；论文里对应 privileged/state-based policy 的观测。
     # ------------------- PPO CONFIG -------------------
-    cfg_ppo = PPO_DEFAULT_CONFIG.copy()
-    cfg_ppo["rollouts"] = 24  # memory_size
-    cfg_ppo["learning_epochs"] = 5
-    cfg_ppo["mini_batches"] = 6  # 24 * 8192 / 32768
-    cfg_ppo["discount_factor"] = 0.99
-    cfg_ppo["lambda"] = 0.95
-    cfg_ppo["learning_rate"] = 5e-4
-    cfg_ppo["learning_rate_scheduler"] = KLAdaptiveRL
-    cfg_ppo["learning_rate_scheduler_kwargs"] = {"kl_threshold": 0.008}
-    cfg_ppo["random_timesteps"] = 0
-    cfg_ppo["learning_starts"] = 0
-    cfg_ppo["grad_norm_clip"] = 1.0
-    cfg_ppo["ratio_clip"] = 0.2
-    cfg_ppo["value_clip"] = 0.2
-    cfg_ppo["clip_predicted_values"] = True
-    cfg_ppo["value_loss_scale"] = 1.0
-    cfg_ppo["kl_threshold"] = 0
-    cfg_ppo["rewards_shaper"] = None
-    cfg_ppo["state_preprocessor"] = RunningStandardScaler
-    cfg_ppo["state_preprocessor_kwargs"] = {"size": teacher_obs_space, "device": device}
-    cfg_ppo["value_preprocessor"] = RunningStandardScaler
-    cfg_ppo["value_preprocessor_kwargs"] = {"size": 1, "device": device}
+    cfg_ppo = PPO_DEFAULT_CONFIG.copy()  # teacher 是 PPO 类实例，但在 DAgger 里只加载 checkpoint 并 eval 推理。
+    cfg_ppo["rollouts"] = 24  # memory_size；这里主要为了构造 PPO agent，DAgger 阶段不训练 teacher。
+    cfg_ppo["learning_epochs"] = 5  # teacher 训练超参；DAgger 阶段不会实际更新 teacher。
+    cfg_ppo["mini_batches"] = 6  # 24 * 8192 / 32768；teacher 训练超参，DAgger 阶段只保留配置。
+    cfg_ppo["discount_factor"] = 0.99  # teacher PPO 配置字段。
+    cfg_ppo["lambda"] = 0.95  # teacher PPO 配置字段。
+    cfg_ppo["learning_rate"] = 5e-4  # teacher PPO 配置字段；DAgger 阶段不优化 teacher。
+    cfg_ppo["learning_rate_scheduler"] = KLAdaptiveRL  # teacher PPO 配置字段；DAgger 阶段不优化 teacher。
+    cfg_ppo["learning_rate_scheduler_kwargs"] = {"kl_threshold": 0.008}  # teacher PPO 配置字段。
+    cfg_ppo["random_timesteps"] = 0  # teacher PPO 配置字段。
+    cfg_ppo["learning_starts"] = 0  # teacher PPO 配置字段。
+    cfg_ppo["grad_norm_clip"] = 1.0  # teacher PPO 配置字段。
+    cfg_ppo["ratio_clip"] = 0.2  # teacher PPO 配置字段。
+    cfg_ppo["value_clip"] = 0.2  # teacher PPO 配置字段。
+    cfg_ppo["clip_predicted_values"] = True  # teacher PPO 配置字段。
+    cfg_ppo["value_loss_scale"] = 1.0  # teacher PPO 配置字段。
+    cfg_ppo["kl_threshold"] = 0  # teacher PPO 配置字段。
+    cfg_ppo["rewards_shaper"] = None  # teacher PPO 配置字段。
+    cfg_ppo["state_preprocessor"] = RunningStandardScaler  # 加载 teacher checkpoint 时需要同样的观测归一化模块。
+    cfg_ppo["state_preprocessor_kwargs"] = {"size": teacher_obs_space, "device": device}  # teacher 观测归一化器尺寸和设备。
+    cfg_ppo["value_preprocessor"] = RunningStandardScaler  # 加载 teacher checkpoint 时需要同样的 value 归一化模块。
+    cfg_ppo["value_preprocessor_kwargs"] = {"size": 1, "device": device}  # value 归一化器尺寸和设备。
 
-    ppo_models = {}
-    ppo_models["policy"] = PPOPolicy(teacher_obs_space, teacher_action_space, device, num_features=1024, encode_dim=128, clip_actions=args.use_tanh, deterministic=True)
-    ppo_models["value"] = PPOValue(teacher_obs_space, teacher_action_space, device, num_features=1024, encode_dim=128)
+    ppo_models = {}  # skrl PPO agent 需要 policy/value 两个模型。
+    ppo_models["policy"] = PPOPolicy(teacher_obs_space, teacher_action_space, device, num_features=1024, encode_dim=128, clip_actions=args.use_tanh, deterministic=True)  # teacher policy；deterministic=True 表示生成稳定专家标签。
+    ppo_models["value"] = PPOValue(teacher_obs_space, teacher_action_space, device, num_features=1024, encode_dim=128)  # teacher value；DAgger 推理时不用它训练，但 PPO agent 构造需要。
     ppo_agent = PPO(models=ppo_models,
-                memory=memory,
-                cfg=cfg_ppo,
-                observation_space=teacher_obs_space,
-                action_space=teacher_action_space,
-                device=device)
+                memory=memory,  # 与 student 共用 memory 对象；DAggerTrainer 只用 teacher act，不让 teacher 记录训练样本。
+                cfg=cfg_ppo,  # teacher PPO agent 的配置。
+                observation_space=teacher_obs_space,  # teacher 输入空间。
+                action_space=teacher_action_space,  # teacher 输出空间。
+                device=device)  # teacher 推理设备。
         
     if not args.eval:
         print("load teacher ckpt: ", args.teacher_ckpt_path)
-        ppo_agent.load(args.teacher_ckpt_path)
+        ppo_agent.load(args.teacher_ckpt_path)  # 加载已经训练好的 teacher；DAgger 用它在线给 student 生成动作标签。
     
     # cfg_trainer = {"timesteps": args.timesteps, "headless": True, "teacher_pretrain": True}
-    cfg_trainer = {"timesteps": args.timesteps, "teacher_pretrain": True}
-    cfg_trainer["pretrain_timesteps"] = 8000 if args.depth_random else 4000
+    cfg_trainer = {"timesteps": args.timesteps, "teacher_pretrain": True}  # DAggerTrainer 配置；真正 warm-up 步数由下一行控制。
+    cfg_trainer["pretrain_timesteps"] = 8000 if args.depth_random else 4000  # 前若干步用 teacher 动作推进环境，对应论文中的 teacher sampling warm-up。
     if args.checkpoint:
         print("Resuming from checkpoint: ", args.checkpoint)
-        agent.load(args.checkpoint)
-        checkpoint_steps = int(args.checkpoint.split("_")[-1].split(".")[0])
+        agent.load(args.checkpoint)  # 恢复 student checkpoint，继续 DAgger 训练或评测。
+        checkpoint_steps = int(args.checkpoint.split("_")[-1].split(".")[0])  # 从文件名解析已训练步数，例如 model_1000.pt -> 1000。
         if args.record_video:
-            experiment_dir = args.checkpoint.split("/")[0]
-            wandb_name = args.checkpoint.split("/")[1]
-            cfg_trainer["video_name"] = wandb_name +"-"+str(checkpoint_steps)
-            cfg_trainer["log_dir"] = experiment_dir
-            cfg_trainer["record_video"] = True
+            experiment_dir = args.checkpoint.split("/")[0]  # 记录视频时从 checkpoint 路径解析实验目录。
+            wandb_name = args.checkpoint.split("/")[1]  # 记录视频时从 checkpoint 路径解析 run 名。
+            cfg_trainer["video_name"] = wandb_name +"-"+str(checkpoint_steps)  # 视频目录/文件名包含 run 名和步数。
+            cfg_trainer["log_dir"] = experiment_dir  # 视频保存时使用的日志目录名。
+            cfg_trainer["record_video"] = True  # 打开 DAggerTrainer.eval 里的视频保存逻辑。
         if not args.eval:
-            cfg_trainer["initial_timestep"] = checkpoint_steps
+            cfg_trainer["initial_timestep"] = checkpoint_steps  # 续训时从 checkpoint 对应步数继续计数。
         
-    trainer = DAggerTrainer(cfg=cfg_trainer, env=env, agents=agent, teacher_agents=ppo_agent)
+    trainer = DAggerTrainer(cfg=cfg_trainer, env=env, agents=agent, teacher_agents=ppo_agent)  # 把 student agent 和 teacher PPO 交给 DAggerTrainer 统一调度。
     if args.wandb:
         import wandb
         wandb.save("data/cfg/" + cfg_file, policy="now")

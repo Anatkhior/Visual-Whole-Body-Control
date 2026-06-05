@@ -169,21 +169,22 @@ class B1Z1PickMulti(B1Z1Base):
             # bottle_indices = torch.tensor([2, 13, 16, 20], device=self.device)
             # cup_indices = torch.tensor([5, 28, 29], device=self.device)
             # drill_indices = torch.tensor([7], device=self.device)
-            num_group = self.num_envs // 33
-            bowl_indices_np = np.array([[0+i*33, 9+i*33, 27+i*33, 31+i*33] for i in range(num_group)]).reshape(1,-1).squeeze()
-            bowl_indices = torch.from_numpy(bowl_indices_np).to(self.device)
-            ball_indices_np = np.array([[3+i*33, 15+i*33, 17+i*33, 23+i*33] for i in range(num_group)]).reshape(1,-1).squeeze()
-            ball_indices = torch.from_numpy(ball_indices_np).to(self.device)
-            long_box_indices_np = np.array([[1+i*33] for i in range(num_group)]).reshape(1,-1).squeeze()
-            long_box_indices = torch.from_numpy(long_box_indices_np).to(self.device)
-            square_box_indices_np = np.array([[11+i*33, 12+i*33, 24+i*33] for i in range(num_group)]).reshape(1,-1).squeeze()
-            square_box_indices = torch.from_numpy(square_box_indices_np).to(self.device)
-            bottle_indices_np = np.array([[2+i*33, 13+i*33, 16+i*33, 20+i*33] for i in range(num_group)]).reshape(1,-1).squeeze()
-            bottle_indices = torch.from_numpy(bottle_indices_np).to(self.device)
-            cup_indices_np = np.array([[5+i*33, 28+i*33, 29+i*33] for i in range(num_group)]).reshape(1,-1).squeeze()
-            cup_indices = torch.from_numpy(cup_indices_np).to(self.device)
-            drill_indices_np = np.array([[7+i*33] for i in range(num_group)]).reshape(1,-1).squeeze()
-            drill_indices = torch.from_numpy(drill_indices_np).to(self.device)
+            def category_indices(offsets):
+                indices = [
+                    idx + group_idx * len(self.obj_list)
+                    for group_idx in range((self.num_envs + len(self.obj_list) - 1) // len(self.obj_list))
+                    for idx in offsets
+                    if idx + group_idx * len(self.obj_list) < self.num_envs
+                ]
+                return torch.tensor(indices, device=self.device, dtype=torch.long)
+
+            bowl_indices = category_indices([0, 9, 27, 31])
+            ball_indices = category_indices([3, 15, 17, 23])
+            long_box_indices = category_indices([1])
+            square_box_indices = category_indices([11, 12, 24])
+            bottle_indices = category_indices([2, 13, 16, 20])
+            cup_indices = category_indices([5, 28, 29])
+            drill_indices = category_indices([7])
             
             bowl_success_time = self.success_counter[bowl_indices].sum().item(), self.episode_counter[bowl_indices].sum().item()
             ball_success_time = self.success_counter[ball_indices].sum().item(), self.episode_counter[ball_indices].sum().item()
@@ -374,7 +375,7 @@ class B1Z1PickMulti(B1Z1Base):
         
         # Randomly change the object position in a small probability (like 0.1)
         obj_move_prob = torch_rand_float(0, 1, (self.num_envs, 1), device=self.device).squeeze()
-        changed_env_ids = torch.range(0, self.num_envs-1, dtype=int, device=self.device)[obj_move_prob < self.obj_move_prob]
+        changed_env_ids = torch.arange(self.num_envs, dtype=torch.long, device=self.device)[obj_move_prob < self.obj_move_prob]
         self._reset_objs(changed_env_ids)
 
         self.extras["lifted_now"] = self.lifted_now.unsqueeze(-1)*2-1 # This is for the lifted results from the last step, exactly what we want. Lifted = 1, unlifted = -1
@@ -399,8 +400,7 @@ class B1Z1PickMulti(B1Z1Base):
         self.lifted_object = torch.logical_and((cube_height - self.table_heights - self.init_height) > (self.lifted_success_threshold), d1 < 0.1)
 
         z_cube = self._cube_root_states[:, 2]
-        # cube_falls = (z_cube < (self.table_heights + 0.03 / 2 - 0.05))
-        cube_falls = z_cube < self.table_heights # Fall or model glitch
+        cube_falls = (z_cube < (self.table_heights + 0.03 / 2 - 0.05))
         self.reset_buf[:] = self.reset_buf | cube_falls
         # print("cube falls", cube_falls[0])
         

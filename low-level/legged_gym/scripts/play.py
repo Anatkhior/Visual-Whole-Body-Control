@@ -106,10 +106,11 @@ def play(args):
         for i in range(env.num_envs):
             video_name = args.exptid+ f'-{i}-' + str(checkpoint) +".mp4"
             run_name = log_pth.split("/")[-1]
-            path = f"../../logs/videos/{run_name}"
+            path = os.path.join(LEGGED_GYM_ROOT_DIR, "logs", "videos", run_name)
             if not os.path.exists(path):
                 os.makedirs(path)
             video_name = os.path.join(path, video_name)
+            print(f"Recording video to: {video_name}")
             mp4_writer = imageio.get_writer(video_name, fps=25)
             mp4_writers.append(mp4_writer)
 

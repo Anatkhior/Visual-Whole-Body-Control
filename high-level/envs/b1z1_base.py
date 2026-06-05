@@ -404,7 +404,10 @@ class B1Z1Base(RewardVecTask):
     
     def create_sim(self):
         self.up_axis_idx = 2 # Y=1, Z=2;
-        self.sim = super().create_sim(self.sim_id, self.sim_id, self.physics_engine, self.sim_params)
+        graphics_device = self.graphics_device_id
+        if graphics_device < 0 and not self.headless:
+            graphics_device = self.sim_id
+        self.sim = super().create_sim(self.sim_id, graphics_device, self.physics_engine, self.sim_params)
         
         self._create_grond_plane()
         self._create_envs()
