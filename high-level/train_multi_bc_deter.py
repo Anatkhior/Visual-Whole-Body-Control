@@ -196,6 +196,9 @@ def create_env(cfg, args, mode):
     import utils.wrapper as wrapper
 
     cfg["sensor"]["enableCamera"] = True
+    cfg["enableCameraSensors"] = True
+    if args.graphics_device_id < 0:
+        args.graphics_device_id = 0
     cfg["env"]["enableDebugVis"] = args.debugvis
     cfg["env"]["cameraMode"] = mode
     if args.last_commands:

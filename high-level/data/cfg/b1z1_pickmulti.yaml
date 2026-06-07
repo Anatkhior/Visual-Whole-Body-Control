@@ -17,7 +17,7 @@ env:
   holdSteps: 25
   lastCommands: False
 
-  low_policy_path: "data/low_policy/model_38000.pt" # local low-level checkpoint from Google Drive
+  low_policy_path: "data/low_policy/publiccheckrollrew_37000.pt"
 
   asset:
     assetRoot: "data/asset"

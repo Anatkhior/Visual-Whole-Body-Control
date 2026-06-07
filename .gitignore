@@ -17,6 +17,10 @@ IsaacGymEnvs/
 **events*
 **/*.pt
 **/*.log
+agent-log/SSH.md
+remote-run/local/remote.env
+remote-results/
+high-level/experiments-smoke/
 **/.idea
 **/*.egg-info
 **/.pytest_cache
@@ -66,4 +70,3 @@ Thumbs.db
 *.flv
 *.mov
 *.wmv
-
