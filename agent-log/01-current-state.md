@@ -1,6 +1,6 @@
 # 当前状态
 
-更新时间：2026-06-08 20:46:31 CST +0800。
+更新时间：2026-06-08 21:08:10 CST +0800。
 
 当前目标：已回到“官方环境/teacher 对齐后重训”路线。当前本地与远端 high-level 环境已按 W&B 成功 run `publiccheckrollrew_37000_2` 保存代码对齐关键 reset/table/object 逻辑，并已启动新 teacher 长训 `teacher-officialalign-low37000-20260607-2116`。训练正在远端 GPU1 的 tmux `vbc_teacher_g1` 中运行，首个 checkpoint `agent_500.pt` 已生成。
 
@@ -130,6 +130,7 @@
 - 2026-06-08 09:19 CST 用户已将临时 SSH 公钥加入 GitHub 后，已通过 SSH 成功推送分支 `repro-handoff-and-training-fixes` 到 `git@github.com:Anatkhior/Visual-Whole-Body-Control.git`。GitHub 返回 PR 创建地址：`https://github.com/Anatkhior/Visual-Whole-Body-Control/pull/new/repro-handoff-and-training-fixes`。
 - 2026-06-08 09:58 CST 复查新 teacher `teacher-officialalign-low37000-20260607-2116`：tmux `vbc_teacher_g1` 仍在运行，进程 `python train_multistate.py ...` 正常存在；GPU1 约 `10263MiB/24576MiB`、利用率 `91%`。训练进度约 `36376/60000`，最新 checkpoint 为 `agent_36000.pt`，`best_agent.pt` 时间戳为 `2026-06-08 09:50`。严格解析日志得到 `Total success rate` 最新约 `0.04365`，严格峰值约 `0.04607`。当前累计成功率已略高于上一轮 `teacher-cubefallfix-low37000-20260604-1530` 训练末尾约 `0.0385`，但仍远低于官方 W&B 成功 run，需等训练完成后做 headless/termination probe 才能判断是否真正更好。
 - 2026-06-08 20:45 CST 复查确认新 teacher 已完成：远端无 `vbc_teacher_g1` tmux、无 `train_multistate.py` 训练进程；GPU0/GPU1 基本空闲。日志显示 `Teacher training python exit code: 0`，并于 `2026-06-08 18:38:35 CST +0800` 正常退出。进度达到 `60000/60000`，最终 checkpoint `agent_60000.pt` 已生成；严格解析 `Total success rate` 末值约 `0.03259`，峰值仍约 `0.04607`。`best_agent.pt` 时间戳为 `2026-06-08 12:58`，与 `agent_44500.pt` 对齐；后续应先用 `best_44500.pt -> best_agent.pt` 和 `agent_60000.pt` 做 termination/headless probe。
+- 2026-06-08 21:08 CST 已完成新 teacher 初步独立 termination probe：`best_44500.pt -> best_agent.pt`、`agent_60000.pt`、`agent_36000.pt` 均跑 `1000` steps、34 env，三者 `new_success=0`、`window_success_rate=0.0`、`max_lifted_object_count=0`。具体为：`best_44500` 为 `0/10`，最大高度约 `0.087m`；`agent_60000` 为 `0/8`，最大高度约 `0.093m`；`agent_36000` 为 `0/20`，最大高度约 `0.083m`。该结果说明本轮官方环境对齐 teacher 没有超过上一轮候选 `teacher-cubefallfix-low37000-20260604-1530/best_agent.pt` 的 1000-step probe `7/23` 成功。
 
 远端策略：
 
@@ -193,6 +194,6 @@
 
 建议下一步：
 
-1. 为 `teacher-officialalign-low37000-20260607-2116/checkpoints/best_agent.pt` 创建数字后缀 symlink，例如 `best_44500.pt -> best_agent.pt`，绕过评估脚本的 `best_agent.pt` 文件名解析 bug。
-2. 用 termination probe/headless eval 比较 `agent_60000.pt`、`best_agent.pt` 和必要的中期 checkpoint。
-3. 若本轮 teacher 明显优于上一轮 `best_agent.pt` 的 1000-step probe `new_success=7/23`，再用新 teacher 重训 student；否则继续诊断 low-level checkpoint 等价性和 high-level 依赖版本差异。
+1. 暂不建议用 `teacher-officialalign-low37000-20260607-2116` 重训 student；其初步独立 probe 明显弱于上一轮候选 teacher。
+2. 若继续诊断，优先比较本轮官方对齐改动是否引入了新的任务分布/桌高问题，尤其是桌面高度随机范围、物体初始高度和低层 `publiccheckrollrew_37000.pt` 等价性。
+3. 若目标是尽快推进 student 或演示，仍应回退使用上一轮候选 `teacher-cubefallfix-low37000-20260604-1530/best_agent.pt`，但要明确其成功率也低于官方。
