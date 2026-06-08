@@ -1,6 +1,6 @@
 # 当前状态
 
-更新时间：2026-06-08 10:02:05 CST +0800。
+更新时间：2026-06-08 20:46:31 CST +0800。
 
 当前目标：已回到“官方环境/teacher 对齐后重训”路线。当前本地与远端 high-level 环境已按 W&B 成功 run `publiccheckrollrew_37000_2` 保存代码对齐关键 reset/table/object 逻辑，并已启动新 teacher 长训 `teacher-officialalign-low37000-20260607-2116`。训练正在远端 GPU1 的 tmux `vbc_teacher_g1` 中运行，首个 checkpoint `agent_500.pt` 已生成。
 
@@ -129,6 +129,7 @@
 - 2026-06-07 22:27 CST 本地 Git 提交已创建在分支 `repro-handoff-and-training-fixes`，提交信息为 `chore: add reproduction handoff and remote training scripts`。尝试推送到 `origin` 失败，GitHub 返回 `fatal: could not read Username for 'https://github.com'`；这表示当前机器没有可用 HTTPS 凭据或写权限，后续需要配置 GitHub token/凭据，或把分支推到用户自己的 fork。
 - 2026-06-08 09:19 CST 用户已将临时 SSH 公钥加入 GitHub 后，已通过 SSH 成功推送分支 `repro-handoff-and-training-fixes` 到 `git@github.com:Anatkhior/Visual-Whole-Body-Control.git`。GitHub 返回 PR 创建地址：`https://github.com/Anatkhior/Visual-Whole-Body-Control/pull/new/repro-handoff-and-training-fixes`。
 - 2026-06-08 09:58 CST 复查新 teacher `teacher-officialalign-low37000-20260607-2116`：tmux `vbc_teacher_g1` 仍在运行，进程 `python train_multistate.py ...` 正常存在；GPU1 约 `10263MiB/24576MiB`、利用率 `91%`。训练进度约 `36376/60000`，最新 checkpoint 为 `agent_36000.pt`，`best_agent.pt` 时间戳为 `2026-06-08 09:50`。严格解析日志得到 `Total success rate` 最新约 `0.04365`，严格峰值约 `0.04607`。当前累计成功率已略高于上一轮 `teacher-cubefallfix-low37000-20260604-1530` 训练末尾约 `0.0385`，但仍远低于官方 W&B 成功 run，需等训练完成后做 headless/termination probe 才能判断是否真正更好。
+- 2026-06-08 20:45 CST 复查确认新 teacher 已完成：远端无 `vbc_teacher_g1` tmux、无 `train_multistate.py` 训练进程；GPU0/GPU1 基本空闲。日志显示 `Teacher training python exit code: 0`，并于 `2026-06-08 18:38:35 CST +0800` 正常退出。进度达到 `60000/60000`，最终 checkpoint `agent_60000.pt` 已生成；严格解析 `Total success rate` 末值约 `0.03259`，峰值仍约 `0.04607`。`best_agent.pt` 时间戳为 `2026-06-08 12:58`，与 `agent_44500.pt` 对齐；后续应先用 `best_44500.pt -> best_agent.pt` 和 `agent_60000.pt` 做 termination/headless probe。
 
 远端策略：
 
@@ -192,6 +193,6 @@
 
 建议下一步：
 
-1. 持续监控 `teacher-officialalign-low37000-20260607-2116`：重点看 tmux 是否仍在、`agent_1000.pt`/后续 checkpoint 是否生成、严格 `Total success rate` 是否持续上升。
-2. 训练完成或出现明显候选 best 后，用 termination probe/headless eval 比较 `agent_60000.pt`、`best_agent.pt` 和中后期 checkpoint。
+1. 为 `teacher-officialalign-low37000-20260607-2116/checkpoints/best_agent.pt` 创建数字后缀 symlink，例如 `best_44500.pt -> best_agent.pt`，绕过评估脚本的 `best_agent.pt` 文件名解析 bug。
+2. 用 termination probe/headless eval 比较 `agent_60000.pt`、`best_agent.pt` 和必要的中期 checkpoint。
 3. 若本轮 teacher 明显优于上一轮 `best_agent.pt` 的 1000-step probe `new_success=7/23`，再用新 teacher 重训 student；否则继续诊断 low-level checkpoint 等价性和 high-level 依赖版本差异。

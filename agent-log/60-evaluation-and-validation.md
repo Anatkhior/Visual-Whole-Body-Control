@@ -251,3 +251,4 @@
   - 2026-06-07 21:25 CST 复查：tmux `vbc_teacher_g1` 存在，进程 `python train_multistate.py ... --wandb_name teacher-officialalign-low37000-20260607-2116 ...` 存在；GPU1 约 `5779MiB/24576MiB`、利用率 `92%`。
   - 2026-06-07 21:34:59 CST 复查：进度约 `515/60000`，最新严格 `Total success rate=5.432420686657975e-05`，`agent_500.pt` 已生成，大小约 `20M`。
   - 2026-06-08 09:58 CST 复查：tmux 和 `train_multistate.py` 仍正常运行；GPU1 约 `10263MiB/24576MiB`、利用率 `91%`；进度约 `36376/60000`；最新 checkpoint `agent_36000.pt` 已生成；严格解析 `Total success rate` 最新约 `0.04365`、峰值约 `0.04607`。这是训练累计指标，不能替代完训后的独立 headless/termination probe。
+  - 2026-06-08 20:45 CST 复查：训练已正常完成，日志含 `Teacher training python exit code: 0` 和 `Teacher training exited at 2026-06-08 18:38:35 CST +0800`；进度 `60000/60000`；最终 `agent_60000.pt` 已生成；严格解析 `Total success rate` 末值约 `0.03259`、峰值约 `0.04607`；`best_agent.pt` 时间戳与 `agent_44500.pt` 对齐。下一步需要独立 probe/eval，而不是只看训练累计指标。
