@@ -31,6 +31,7 @@
 - 2026-06-07 将续作资料整理进 Git 仓库，包括 `agent-log/`、`remote-run/`、`teacher_success_log.md`、`REPRODUCTION_HANDOFF.md`、敏感连接信息脱敏和私有配置忽略规则，记录在外层与仓库内 `agent-log/01-current-state.md`，具体文件以 `Visual-Whole-Body-Control` 的 Git 状态为准。
 - 2026-06-07 仓库交接资料二次整理，包括 `REPRODUCTION_HANDOFF.md` 中文化、`remote-run/local/sync_to_remote.sh` 对外部低层权重的可选上传、`remote-run/remote/20_prepare_project.sh` 对 `LOW_POLICY_TARGET_NAME` 的支持，以及 `remote-run/README.md` 的新机器续跑说明，记录在仓库内 `agent-log/01-current-state.md` 和 `80-artifacts-index.md`。
 - 2026-06-07 本地 Git 提交和推送尝试：提交位于分支 `repro-handoff-and-training-fixes`；向 `origin` 推送被 HTTPS 凭据问题阻塞。该结论来自本轮 `git commit` 和 `git push -u origin repro-handoff-and-training-fixes` 输出。
+- 2026-06-08 GitHub SSH 推送成功：用户将临时 SSH 公钥加入 GitHub 后，本地使用 `/tmp/vbc_github_push_ed25519` 通过 SSH 推送分支 `repro-handoff-and-training-fixes` 到 `Anatkhior/Visual-Whole-Body-Control`。该结论来自 `git push -u git@github.com:Anatkhior/Visual-Whole-Body-Control.git repro-handoff-and-training-fixes` 输出。
 - `60-evaluation-and-validation.md` 来源于本次会话中实际运行的验证命令输出，以及 2026-05-25 对 `model_38000.pt`、conda 环境、PyTorch CUDA、Isaac Gym、`skrl`、`rsl_rl/legged_gym` 导入路径的只读检查。
 - `70-diagnostics-and-dead-ends.md` 来源于本次会话中失败的 `git clone`、部分克隆、`git read-tree` 和错误路径 `git hash-object` 尝试。
 
