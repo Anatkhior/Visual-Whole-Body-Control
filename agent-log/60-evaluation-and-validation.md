@@ -257,3 +257,16 @@
     - `agent_60000.pt`，1000 steps、34 env：`new_success=0`、`new_episodes=8`、`window_success_rate=0.0`、`max_lifted_object_count=0`、`max_curr_height≈0.093m`、退出码 `0`。
     - `agent_36000.pt`，1000 steps、34 env：`new_success=0`、`new_episodes=20`、`window_success_rate=0.0`、`max_lifted_object_count=0`、`max_curr_height≈0.083m`、退出码 `0`。
     - 结论：本轮官方对齐 teacher 的独立 probe 暂不通过，且弱于上一轮候选 teacher `best_agent.pt` 的 1000-step probe `7/23` 成功。
+  - 2026-06-08 21:46 CST reset 分布采样：
+    - 临时脚本：`/tmp/vbc_reset_stats.py`，先 import `isaacgym` 再 import `torch`，避免 Isaac Gym 导入顺序错误。
+    - 有效样本：`256` env、`3` 轮全量 reset。
+    - 桌面高度实测：每轮约 `min≈0.000-0.002m`、`mean≈0.296-0.312m`、`max≈0.598-0.600m`，符合当前官方对齐代码 `[-0.25, 0.35]` 加到 table root z 后形成的桌面高度 `[0, 0.6]`。
+    - 物体相对桌面高度：`cube_z_minus_table_minus_init_height` 均值约 `0.00015m`，p90 约 `0.00055m`，说明物体 reset 后基本贴桌，不支持“物体初始悬空/穿桌导致失败”的假设。
+    - 机械臂基座 z 约 `0.6398m`，物体 z 分布约 `0.02-0.72m`，高桌样本接近机械臂可操作上界；该点会增加任务难度，但不是唯一失败解释。
+  - 2026-06-08 21:55 CST 固定桌高 v2 sweep：
+    - 临时脚本：`/tmp/vbc_table_sweep_probe.py`；第一版发现 `env.reset()` 只 reset 已标记 env，导致跨桌高混杂，已作废；v2 在每个高度前设置 `raw.reset_buf[:] = 1` 强制全量 reset。
+    - 有效性检查：v2 每档 `observed_table_heights` 的 min/max 与固定高度一致。
+    - 条件：每个 checkpoint 固定桌高 `0.10/0.20/0.30/0.40/0.50/0.60m`，每档 `300` steps、`34` env。
+    - `teacher-officialalign-low37000-20260607-2116/best_44500.pt`：`0.10=0/7`、`0.20=0/7`、`0.30=0/1`、`0.40=0/5`、`0.50=1/6`、`0.60=1/4`；低中桌高基本无成功，高桌只有少量成功信号。
+    - `teacher-cubefallfix-low37000-20260604-1530/best_agent.pt` 通过 `/tmp/best_53000.pt`：`0.10=1/6`、`0.20=3/7`、`0.30=5/6`、`0.40=8/8`、`0.50=6/6`、`0.60=1/1`；样本数仍小，但相对最新 official-align 明显更强。
+    - 结论：最新 official-align teacher 失败不是 `best_agent.pt` 文件名 bug、低层加载失败或随机高度 probe 单点误判；同一评估环境下上一轮候选能稳定产生抬升/成功信号。

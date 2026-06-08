@@ -675,6 +675,49 @@ Student headless 限时评估原始记录摘要：
   - GPU0：`548 MiB / 24576 MiB`，`0%`
   - GPU1：`277 MiB / 24576 MiB`，`0%`
 
+<!-- source: session 2026-06-08 21:18-21:55 CST +0800, official-align teacher reset/table sweep diagnostics -->
+
+official-align teacher reset/table sweep 诊断原始摘要：
+
+- 用户任务：开始诊断最新 official-align teacher 为何训练完成后独立 probe 仍弱。
+- 远端状态：
+  - 时间：`2026-06-08 21:21:58 CST`
+  - GPU0：`548 MiB, 0 %`
+  - GPU1：`277 MiB, 0 %`
+  - 无 `train_multistate.py`、`train_multi_bc_deter.py`、`play_multistate.py` 训练/评估进程。
+- reset 分布采样：
+  - 临时脚本：`/tmp/vbc_reset_stats.py`
+  - 初次脚本失败：先 import `torch` 再 import `isaacgym`，报 `ImportError: PyTorch was imported before isaacgym modules`。
+  - 修正：脚本顶部先 import `isaacgym`，再 import `torch`。
+  - 有效命令核心：`CUDA_VISIBLE_DEVICES=0 RESET_STATS_NUM_ENVS=256 RESET_STATS_CYCLES=3 python /tmp/vbc_reset_stats.py > /tmp/vbc_reset_stats.out 2> /tmp/vbc_reset_stats.err`
+  - reset stats 结果摘要：
+    - `table_heights` cycle0：`min=0.00198`、`mean=0.29555`、`max=0.59939`
+    - `table_heights` cycle1：`min=0.00008`、`mean=0.31211`、`max=0.59837`
+    - `table_heights` cycle2：`min=0.00044`、`mean=0.30334`、`max=0.59966`
+    - `cube_z_minus_table_minus_init_height` 均值约 `0.00015-0.00018m`，p90 约 `0.00055m`
+    - `arm_base_z` 约 `0.63983m`
+  - 解释：官方对齐代码实际形成桌面高度 `[0, 0.6]`；物体 reset 基本贴桌，不支持初始悬空/穿桌假设。
+- 固定桌高 sweep：
+  - 临时脚本：`/tmp/vbc_table_sweep_probe.py`
+  - v1 作废：脚本只调用 `env.reset()`，而 `B1Z1Base.reset()` 只 reset `reset_buf` 中已标记 env；`observed_table_heights` 显示跨高度混杂。v1 输出保留在 `/tmp/vbc_table_sweep_officialalign_best44500.out` 和 `/tmp/vbc_table_sweep_cubefallfix_best53000.out`，不能作为结论依据。
+  - v2 修正：每个固定桌高前设置 `raw.reset_buf[:] = 1`，强制全体 env reset；v2 每档 `observed_table_heights` min/max 与目标高度一致。
+  - official-align v2 命令核心：`CUDA_VISIBLE_DEVICES=0 python /tmp/vbc_table_sweep_probe.py --checkpoint .../teacher-officialalign-low37000-20260607-2116/checkpoints/best_44500.pt --steps 300 --heights 0.10,0.20,0.30,0.40,0.50,0.60 ... > /tmp/vbc_table_sweep_officialalign_best44500_v2.out 2> /tmp/vbc_table_sweep_officialalign_best44500_v2.err`
+  - cubefallfix v2 命令核心：`CUDA_VISIBLE_DEVICES=1 python /tmp/vbc_table_sweep_probe.py --checkpoint /tmp/best_53000.pt --steps 300 --heights 0.10,0.20,0.30,0.40,0.50,0.60 ... > /tmp/vbc_table_sweep_cubefallfix_best53000_v2.out 2> /tmp/vbc_table_sweep_cubefallfix_best53000_v2.err`
+- fixed table sweep v2 摘要：
+
+| checkpoint | 0.10m | 0.20m | 0.30m | 0.40m | 0.50m | 0.60m |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `officialalign best_44500.pt` | `0/7` | `0/7` | `0/1` | `0/5` | `1/6` | `1/4` |
+| `cubefallfix best_53000.pt` | `1/6` | `3/7` | `5/6` | `8/8` | `6/6` | `1/1` |
+
+- 最大抬升摘要：
+  - `officialalign best_44500.pt`：`0.061/0.188/0.073/0.064/0.377/0.365m`
+  - `cubefallfix best_53000.pt`：`0.385/0.389/0.414/0.393/0.396/0.365m`
+- 结论：
+  - 同一当前评估代码和同一低层加载路径下，上一轮候选 teacher 明显强于最新 official-align teacher。
+  - 最新 official-align teacher 失败不是 checkpoint 文件名、低层加载或随机高度 probe 单点误判导致。
+  - 样本数仍小，不能把固定桌高成功率当作最终评测成功率；但足够支持“不要用最新 official-align teacher 继续 student 长训”的决策。
+
 <!-- source: session 2026-06-07 21:11-21:34 CST +0800, official-align smoke and first checkpoint validation -->
 
 官方对齐后 teacher 启动验证原始记录摘要：

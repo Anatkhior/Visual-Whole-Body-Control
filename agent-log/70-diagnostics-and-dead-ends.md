@@ -182,3 +182,23 @@
 - 评估日志中的类别字典会被 `tqdm` 回车进度条粘在同一行，不能只用 `line.startswith("{'success_rate'")` 解析；本次最终用 `text.find("{'success_rate'")` 逐段截取后 `ast.literal_eval()` 得到 220/229 条类别记录。
 - student 大权重本地同步未完成：并发 `scp` 和单文件 `rsync -az --progress` 都只有约 `10-20KiB/s`，单个约 `96.5MiB` checkpoint 估算需要数小时。已终止这些慢速传输并清理不完整本地 checkpoint，避免误用半文件。
 - 当前远端权重完整存在并已记录 SHA256；本地只有日志和配置完成同步。后续若必须本地推理/评估，应在网络条件更好时重新同步 `agent_60000.pt` 和/或 `best_agent.pt`。
+
+2026-06-08 21:55 CST official-align teacher 失败诊断：
+
+- 已排除的解释：
+  - `best_agent.pt` 文件名解析 bug：本轮使用数字后缀 symlink `best_44500.pt -> best_agent.pt`，仍在随机高度 1000-step probe 中 `0/10`。
+  - 低层权重未加载：reset 采样和 probe 日志均显示 `Low level pretrained policy loaded!`。
+  - 物体 reset 初始悬空/穿桌：`cube_z - table_height - init_height` 均值约 `0.00015m`，物体基本贴桌。
+  - 固定桌高 sweep v1：该版本未强制全体 env reset，`observed_table_heights` 混杂，已作废，不能作为结论依据。
+- 当前证据：
+  - official-align 环境桌面高度真实分布约 `[0, 0.6]`，比上一轮较强的 cubefallfix 训练分布 `[0, 0.5]` 更宽，且高桌物体 z 可接近 `0.72m`。
+  - 修正后的固定桌高 v2 sweep 显示，在同一当前评估代码下，上一轮候选 `teacher-cubefallfix-low37000-20260604-1530/best_agent.pt` 明显强于最新 `teacher-officialalign-low37000-20260607-2116/best_44500.pt`。
+  - official-align checkpoint 在固定 `0.50/0.60m` 桌高有少量成功，但在 `0.10-0.40m` 基本失败；cubefallfix checkpoint 在 `0.10-0.60m` 均有成功信号。
+- 当前判断：
+  - 中高置信度：最新 official-align run 本身学弱了，不能用它继续 student 长训。
+  - 中等置信度：官方 W&B 保存代码中的 table reset 分布/顺序与 PPO 随机性共同使训练更不稳定；“更接近 W&B 文件”不等于这一次 seed 会复现官方成功曲线。
+  - 低到中等置信度：`_reset_actors()` 顺序中 `super()._reset_actors()` 会先触发 `update_roboinfo()`，但 reward/termination 前 `post_physics_step()` 会再次更新，因此它不是单独解释失败的强证据；更适合作为后续 ablation 项。
+  - 中等置信度：依赖栈仍与 W&B 成功 run 不一致，远端是 `torch 2.4.1+cu121`，官方记录是 `torch 2.1.2`/`numpy 1.24.4`；Isaac Gym 接触数值差异可能放大训练不稳定性。
+- 建议：
+  - 实用路线：回退使用 `teacher-cubefallfix-low37000-20260604-1530/best_agent.pt` 作为当前最强 teacher 候选。
+  - 诊断路线：保留官方 `cube_falls` 与 `publiccheckrollrew_37000.pt`，只对 table reset 范围/顺序做短 ablation 或多 seed，而不是再直接重复同一 official-align 单 seed 长训。

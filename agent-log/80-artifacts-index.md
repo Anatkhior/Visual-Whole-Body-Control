@@ -17,6 +17,27 @@
 - Teacher 阶段汇总：`teacher_success_log.md`
 - 私有连接信息模板：`agent-log/SSH.example.md`
 - 不提交但后续需要手动准备的内容：低层 `.pt` 权重、远端 `.pt` checkpoint、大 `.log`、视频、`remote-run/local/remote.env`、`agent-log/SSH.md`、`remote-results/`
+
+## 2026-06-08 official-align 诊断临时产物
+
+- 远端 reset 分布采样脚本：`/tmp/vbc_reset_stats.py`
+- 远端 reset 分布采样输出：
+  - stdout：`/tmp/vbc_reset_stats.out`
+  - stderr：`/tmp/vbc_reset_stats.err`
+- 远端固定桌高 sweep 脚本：`/tmp/vbc_table_sweep_probe.py`
+- 作废的 sweep v1 输出，原因是未强制全体 env reset，导致跨高度混杂：
+  - `/tmp/vbc_table_sweep_officialalign_best44500.out`
+  - `/tmp/vbc_table_sweep_cubefallfix_best53000.out`
+- 有效的 sweep v2 输出：
+  - `/tmp/vbc_table_sweep_officialalign_best44500_v2.out`
+  - `/tmp/vbc_table_sweep_officialalign_best44500_v2.err`
+  - `/tmp/vbc_table_sweep_cubefallfix_best53000_v2.out`
+  - `/tmp/vbc_table_sweep_cubefallfix_best53000_v2.err`
+- latest official-align teacher：
+  - run：`/home/ubuntu/vbc-remote/Visual-Whole-Body-Control/high-level/b1-pick-multi-teacher/teacher-officialalign-low37000-20260607-2116`
+  - eval symlink：`.../checkpoints/best_44500.pt -> best_agent.pt`
+- 当前最强候选 teacher：
+  - remote symlink：`/tmp/best_53000.pt -> /home/ubuntu/vbc-remote/Visual-Whole-Body-Control/high-level/b1-pick-multi-teacher/teacher-cubefallfix-low37000-20260604-1530/checkpoints/best_agent.pt`
 - 其他机器 `git clone` 后若要同步低层权重，优先在 `remote-run/local/remote.env` 中设置 `LOW_POLICY_LOCAL_PATH`；若要沿当前官方对齐路线，远端准备阶段使用 `LOW_POLICY_TARGET_NAME=publiccheckrollrew_37000.pt`。
 
 ## 项目关键文件
