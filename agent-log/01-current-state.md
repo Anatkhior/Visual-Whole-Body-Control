@@ -1,6 +1,6 @@
 # 当前状态
 
-更新时间：2026-06-08 09:19:32 CST +0800。
+更新时间：2026-06-08 10:02:05 CST +0800。
 
 当前目标：已回到“官方环境/teacher 对齐后重训”路线。当前本地与远端 high-level 环境已按 W&B 成功 run `publiccheckrollrew_37000_2` 保存代码对齐关键 reset/table/object 逻辑，并已启动新 teacher 长训 `teacher-officialalign-low37000-20260607-2116`。训练正在远端 GPU1 的 tmux `vbc_teacher_g1` 中运行，首个 checkpoint `agent_500.pt` 已生成。
 
@@ -128,6 +128,7 @@
 - 2026-06-07 22:21 CST 继续整理仓库内交接资料：`REPRODUCTION_HANDOFF.md` 已中文化；`remote-run/local/sync_to_remote.sh` 不再强制要求仓库外层存在 `model_38000.pt`，改为可选 `LOW_POLICY_LOCAL_PATH` 上传；`remote-run/remote/20_prepare_project.sh` 支持 `LOW_POLICY_TARGET_NAME`，可直接准备 `publiccheckrollrew_37000.pt` 等非默认低层权重名。
 - 2026-06-07 22:27 CST 本地 Git 提交已创建在分支 `repro-handoff-and-training-fixes`，提交信息为 `chore: add reproduction handoff and remote training scripts`。尝试推送到 `origin` 失败，GitHub 返回 `fatal: could not read Username for 'https://github.com'`；这表示当前机器没有可用 HTTPS 凭据或写权限，后续需要配置 GitHub token/凭据，或把分支推到用户自己的 fork。
 - 2026-06-08 09:19 CST 用户已将临时 SSH 公钥加入 GitHub 后，已通过 SSH 成功推送分支 `repro-handoff-and-training-fixes` 到 `git@github.com:Anatkhior/Visual-Whole-Body-Control.git`。GitHub 返回 PR 创建地址：`https://github.com/Anatkhior/Visual-Whole-Body-Control/pull/new/repro-handoff-and-training-fixes`。
+- 2026-06-08 09:58 CST 复查新 teacher `teacher-officialalign-low37000-20260607-2116`：tmux `vbc_teacher_g1` 仍在运行，进程 `python train_multistate.py ...` 正常存在；GPU1 约 `10263MiB/24576MiB`、利用率 `91%`。训练进度约 `36376/60000`，最新 checkpoint 为 `agent_36000.pt`，`best_agent.pt` 时间戳为 `2026-06-08 09:50`。严格解析日志得到 `Total success rate` 最新约 `0.04365`，严格峰值约 `0.04607`。当前累计成功率已略高于上一轮 `teacher-cubefallfix-low37000-20260604-1530` 训练末尾约 `0.0385`，但仍远低于官方 W&B 成功 run，需等训练完成后做 headless/termination probe 才能判断是否真正更好。
 
 远端策略：
 
