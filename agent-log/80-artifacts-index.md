@@ -40,6 +40,20 @@
   - remote symlink：`/tmp/best_53000.pt -> /home/ubuntu/vbc-remote/Visual-Whole-Body-Control/high-level/b1-pick-multi-teacher/teacher-cubefallfix-low37000-20260604-1530/checkpoints/best_agent.pt`
 - 其他机器 `git clone` 后若要同步低层权重，优先在 `remote-run/local/remote.env` 中设置 `LOW_POLICY_LOCAL_PATH`；若要沿当前官方对齐路线，远端准备阶段使用 `LOW_POLICY_TARGET_NAME=publiccheckrollrew_37000.pt`。
 
+## 2026-06-09 table/reset ablation 产物
+
+- 远端 run：`/home/ubuntu/vbc-remote/Visual-Whole-Body-Control/high-level/b1-pick-multi-teacher/teacher-tablereset-ablation-low37000-20260608-2341`
+- 远端训练日志：`/home/ubuntu/vbc-remote/remote-logs/teacher-tablereset-ablation-low37000-20260608-2341.teacher.log`
+- 远端 checkpoint：
+  - `.../checkpoints/agent_10000.pt`
+  - `.../checkpoints/best_agent.pt`
+  - `.../checkpoints/best_10000.pt -> best_agent.pt`
+- 远端 probe 日志：
+  - `/home/ubuntu/vbc-remote/remote-logs/teacher-tablereset-ablation-low37000-20260608-2341.manual-probe.log`
+  - `/home/ubuntu/vbc-remote/remote-logs/teacher-tablereset-ablation-low37000-20260608-2341.probe-best_10000-manual1000.log`
+  - `/home/ubuntu/vbc-remote/remote-logs/teacher-tablereset-ablation-low37000-20260608-2341.probe-agent_10000-manual1000.log`
+- 本机稳定 SSH key：`/home/hjr/projects/2-Nexus/VBC/.secrets/ssh/vbc_remote_ed25519`，不在 Git 仓库内，不应提交。
+
 ## 项目关键文件
 
 - 顶层说明：`Visual-Whole-Body-Control/README.md`

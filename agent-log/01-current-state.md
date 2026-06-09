@@ -1,8 +1,10 @@
 # 当前状态
 
-更新时间：2026-06-08 21:08:10 CST +0800。
+更新时间：2026-06-09 11:43:53 CST +0800。
 
-当前目标：已回到“官方环境/teacher 对齐后重训”路线。当前本地与远端 high-level 环境已按 W&B 成功 run `publiccheckrollrew_37000_2` 保存代码对齐关键 reset/table/object 逻辑，并已启动新 teacher 长训 `teacher-officialalign-low37000-20260607-2116`。训练正在远端 GPU1 的 tmux `vbc_teacher_g1` 中运行，首个 checkpoint `agent_500.pt` 已生成。
+当前目标：继续诊断 teacher 成功率低的问题。最新 official-align teacher `teacher-officialalign-low37000-20260607-2116` 已完成且弱于上一轮候选；table/reset 短 ablation `teacher-tablereset-ablation-low37000-20260608-2341` 也已完成并完成独立 probe。
+
+当前结论：table/reset ablation 比 official-align 的随机高度 probe `0/10` 有改善，但仍弱于当前最强候选 `teacher-cubefallfix-low37000-20260604-1530/best_agent.pt`。因此暂不建议把 table/reset ablation 扩展成 `60000` 步长训，也不建议用它替代 cubefallfix best 训练 student。
 
 项目目录：
 
@@ -133,6 +135,17 @@
 - 2026-06-08 21:08 CST 已完成新 teacher 初步独立 termination probe：`best_44500.pt -> best_agent.pt`、`agent_60000.pt`、`agent_36000.pt` 均跑 `1000` steps、34 env，三者 `new_success=0`、`window_success_rate=0.0`、`max_lifted_object_count=0`。具体为：`best_44500` 为 `0/10`，最大高度约 `0.087m`；`agent_60000` 为 `0/8`，最大高度约 `0.093m`；`agent_36000` 为 `0/20`，最大高度约 `0.083m`。该结果说明本轮官方环境对齐 teacher 没有超过上一轮候选 `teacher-cubefallfix-low37000-20260604-1530/best_agent.pt` 的 1000-step probe `7/23` 成功。
 - 2026-06-08 21:46 CST 诊断更新：reset 分布采样确认官方对齐环境的桌面高度实际覆盖约 `0.00-0.60m`，均值约 `0.30m`；`cube_z - table_height - init_height` 接近 `0`，说明物体 reset 后贴在桌面上，不是悬空/穿桌导致 probe 失败。
 - 2026-06-08 21:55 CST 固定桌高 v2 sweep 有效完成：脚本已修正为每档前强制全量 reset，`observed_table_heights` 的 min/max 与固定值一致。结果显示上一轮候选 `teacher-cubefallfix-low37000-20260604-1530/best_agent.pt` 在固定桌高 `0.1-0.6m` 下均有成功信号，明显强于最新 `teacher-officialalign-low37000-20260607-2116/best_44500.pt`。因此“最新 official-align 独立 probe 失败”不能简单归因于 probe 脚本或高桌分布；当前更像该轮 teacher 本身学弱了。
+- 2026-06-08 23:53 CST 已启动 table/reset 短 ablation：本地和远端 `high-level/envs/b1z1_pickmulti.py` 只恢复上一轮较强的 table/reset 逻辑，保留官方 `cube_falls` 判定和 `low_policy_path: "data/low_policy/publiccheckrollrew_37000.pt"`。本地 `python3 -m py_compile` 通过；远端 `python3 -m py_compile` 通过；远端低层 `publiccheckrollrew_37000.pt` 仍存在。
+- 本轮没有使用带 `--delete` 的全量 `rsync`，因为仓库本地没有 `high-level/data/low_policy/publiccheckrollrew_37000.pt`，全量同步可能误删远端已有低层权重；本轮只用 `scp` 精确同步了 `high-level/envs/b1z1_pickmulti.py`。
+- table/reset ablation full-scale smoke 已通过：`TEACHER_SMOKE_ENVS=10240`、`TEACHER_SMOKE_TIMESTEPS=24`、GPU1、退出码 `0`，日志 `/home/ubuntu/vbc-remote/remote-logs/teacher-smoke-10240env-24step-20260608-234017.log`。
+- table/reset ablation 短训已启动：run `teacher-tablereset-ablation-low37000-20260608-2341`，tmux `vbc_teacher_ablate_g1`，GPU1，`TEACHER_TIMESTEPS=10000`，日志 `/home/ubuntu/vbc-remote/remote-logs/teacher-tablereset-ablation-low37000-20260608-2341.teacher.log`。2026-06-08 23:51 CST 首个 checkpoint `agent_500.pt` 已生成，大小 `20622586` bytes；同目录 `best_agent.pt` 也已生成。500 步附近最新严格 `Total success rate` 约 `6.7e-05`，只说明出现极早期微弱成功信号，不能据此判断收敛。
+- 2026-06-09 11:05 CST SSH 连接已从 `/tmp/vbc_remote_ed25519` 临时 key 恢复为稳定本地 key `/home/hjr/projects/2-Nexus/VBC/.secrets/ssh/vbc_remote_ed25519`；已验证远端返回 `SSH_OK`。私钥不进入 Git 仓库，私有 `remote-run/local/remote.env` 和外层 `agent-log/SSH.md` 已更新。
+- 2026-06-09 02:59 CST table/reset ablation 短训正常完成：日志包含 `Teacher training python exit code: 0` 和 `Teacher training exited at 2026-06-09 02:59:51 CST +0800`；训练进度 `10000/10000`；最终严格 `Total success rate≈0.0195169`。最终 checkpoint `agent_10000.pt` 已生成，`best_agent.pt` 时间戳与 `agent_3000.pt` 对齐。
+- 原自动 watcher `vbc_tablereset_postprobe` 因训练 tmux 会话残留误判训练仍在运行，已停止；已用手动 tmux `vbc_tablereset_manual_probe` 补跑独立 probe。
+- table/reset ablation 独立 probe 结果：
+  - `best_10000.pt -> best_agent.pt`，1000 steps、34 env：`new_success=1`、`new_episodes=10`、`window_success_rate=0.1`、`max_lifted_object_count=1`、`max_curr_height≈0.373m`。
+  - `agent_10000.pt`，1000 steps、34 env：`new_success=10`、`new_episodes=61`、`window_success_rate≈0.1639`、`max_lifted_object_count=1`、`max_curr_height≈0.407m`。
+  - 对比：弱于当前最强 `teacher-cubefallfix-low37000-20260604-1530/best_agent.pt` 的 1000-step probe `7/23≈0.3043`，但强于 latest official-align 的 `0/10`。
 
 远端策略：
 
@@ -171,6 +184,11 @@
 - 当前 student log：`/home/ubuntu/vbc-remote/remote-logs/student-best53000-display0-20260606-1145.student.log`。
 - 当前 student run dir：`/home/ubuntu/vbc-remote/Visual-Whole-Body-Control/high-level/b1-pick-multi-stu/student-best53000-display0-20260606-1145`。
 - 当前 student 最新进度：首轮旧日志停在 `10159/60000` 后从 `agent_10000.pt` 续训；续训段已完成 `50000/50000`，等效总进度 `60000/60000`。最新常规 checkpoint 为 `agent_60000.pt`，另有 `best_agent.pt`。
+- 当前 table/reset ablation teacher tmux：已退出；训练完成。
+- 当前 table/reset ablation teacher run：`teacher-tablereset-ablation-low37000-20260608-2341`。
+- 当前 table/reset ablation teacher log：`/home/ubuntu/vbc-remote/remote-logs/teacher-tablereset-ablation-low37000-20260608-2341.teacher.log`。
+- 当前 table/reset ablation teacher run dir：`/home/ubuntu/vbc-remote/Visual-Whole-Body-Control/high-level/b1-pick-multi-teacher/teacher-tablereset-ablation-low37000-20260608-2341`。
+- 当前 table/reset ablation 最新已确认 checkpoint：`agent_10000.pt`；`best_agent.pt` 对齐 `agent_3000.pt` 附近。
 
 最短启动流程：
 
@@ -196,6 +214,7 @@
 
 建议下一步：
 
-1. 暂不建议用 `teacher-officialalign-low37000-20260607-2116` 重训 student；其随机高度 probe 与固定桌高 sweep 均弱于上一轮候选 teacher。
-2. 若目标是尽快推进 student 或演示，优先回退使用上一轮候选 `teacher-cubefallfix-low37000-20260604-1530/best_agent.pt`，但要明确其成功率仍低于官方论文/W&B 成功 run。
-3. 若目标是解释为何官方对齐 run 仍弱，下一步应做短 ablation：保留官方 `cube_falls` 与低层 `publiccheckrollrew_37000.pt`，只恢复上一轮较强的 table reset 范围/顺序，跑短训或多 seed；同时不要把“官方 W&B 保存代码”与“必然复现成功”画等号，公开 W&B 中也存在低成功/崩溃 run。
+1. 暂不扩展 `teacher-tablereset-ablation-low37000-20260608-2341` 到 `60000` 步；短训 probe 已表明它仍弱于 cubefallfix best。
+2. 若要继续诊断 teacher，优先围绕 `teacher-cubefallfix-low37000-20260604-1530/best_agent.pt` 做更长独立评估/视频证据，或做多 seed/依赖栈对齐，而不是继续单 seed table/reset 长训。
+3. 暂不建议用 `teacher-officialalign-low37000-20260607-2116` 或 table/reset ablation 替换当前最强 cubefallfix teacher 重训 student。
+4. 若要继续远端操作，使用稳定 key `/home/hjr/projects/2-Nexus/VBC/.secrets/ssh/vbc_remote_ed25519`；不要再依赖 `/tmp/vbc_remote_ed25519`。

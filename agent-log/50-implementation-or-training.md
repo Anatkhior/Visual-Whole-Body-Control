@@ -242,3 +242,13 @@
   - log：`/home/ubuntu/vbc-remote/remote-logs/teacher-officialalign-low37000-20260607-2116.teacher.log`
   - run dir：`/home/ubuntu/vbc-remote/Visual-Whole-Body-Control/high-level/b1-pick-multi-teacher/teacher-officialalign-low37000-20260607-2116`
 - 2026-06-07 21:34:59 CST 早期复查：进度约 `515/60000`，`agent_500.pt` 已生成，最新严格 `Total success rate=5.432420686657975e-05`。这只是启动健康信号，不能据此判断最终 teacher 质量。
+
+2026-06-09 11:43:53 CST +0800 table/reset 短 ablation 完成：
+
+- 本轮目的：保留官方 `cube_falls` 判定和低层 `publiccheckrollrew_37000.pt`，只把 `high-level/envs/b1z1_pickmulti.py` 的 table/reset 逻辑恢复到上一轮较强的 cubefallfix 版本。
+- run：`teacher-tablereset-ablation-low37000-20260608-2341`
+- 训练条件：GPU1，`TEACHER_TIMESTEPS=10000`，W&B disabled，full-scale smoke 先前已通过。
+- 训练完成：日志含 `Teacher training python exit code: 0` 和 `Teacher training exited at 2026-06-09 02:59:51 CST +0800`，进度达到 `10000/10000`。
+- 最终训练累计 `Total success rate≈0.0195169`。
+- checkpoint：`agent_500.pt` 至 `agent_10000.pt` 均已生成；`best_agent.pt` 时间戳与 `agent_3000.pt` 对齐。
+- 结论：短训有有效成功信号，但不足以支持继续扩展为 `60000` 步长训，除非后续多 seed 或更长独立评估显示其超过当前 cubefallfix best。

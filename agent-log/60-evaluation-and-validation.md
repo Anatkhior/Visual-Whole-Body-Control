@@ -270,3 +270,16 @@
     - `teacher-officialalign-low37000-20260607-2116/best_44500.pt`：`0.10=0/7`、`0.20=0/7`、`0.30=0/1`、`0.40=0/5`、`0.50=1/6`、`0.60=1/4`；低中桌高基本无成功，高桌只有少量成功信号。
     - `teacher-cubefallfix-low37000-20260604-1530/best_agent.pt` 通过 `/tmp/best_53000.pt`：`0.10=1/6`、`0.20=3/7`、`0.30=5/6`、`0.40=8/8`、`0.50=6/6`、`0.60=1/1`；样本数仍小，但相对最新 official-align 明显更强。
     - 结论：最新 official-align teacher 失败不是 `best_agent.pt` 文件名 bug、低层加载失败或随机高度 probe 单点误判；同一评估环境下上一轮候选能稳定产生抬升/成功信号。
+
+2026-06-09 11:43:53 CST +0800 table/reset ablation 独立 probe：
+
+- 自动 watcher `vbc_tablereset_postprobe` 未能进入 probe，因为训练 tmux 会话残留导致 watcher 误判训练仍在运行；已停止该 watcher，并用 `vbc_tablereset_manual_probe` 手动补跑。
+- `best_10000.pt -> best_agent.pt`：
+  - 1000 steps、34 env、退出码 `0`。
+  - `new_success=1`、`new_episodes=10`、`window_success_rate=0.1`。
+  - `max_lifted_object_count=1`、`max_curr_height≈0.37316m`、`min_curr_dist≈0.00889m`。
+- `agent_10000.pt`：
+  - 1000 steps、34 env、退出码 `0`。
+  - `new_success=10`、`new_episodes=61`、`window_success_rate≈0.16393`。
+  - `max_lifted_object_count=1`、`max_curr_height≈0.40743m`、`min_curr_dist≈0.00670m`。
+- 对比判断：table/reset ablation 明显强于 latest official-align 的 `0/10`，但仍弱于 `teacher-cubefallfix-low37000-20260604-1530/best_agent.pt` 的 1000-step probe `7/23≈0.30435`。当前不建议用本轮替代 cubefallfix best 做 student。

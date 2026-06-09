@@ -202,3 +202,10 @@
 - 建议：
   - 实用路线：回退使用 `teacher-cubefallfix-low37000-20260604-1530/best_agent.pt` 作为当前最强 teacher 候选。
   - 诊断路线：保留官方 `cube_falls` 与 `publiccheckrollrew_37000.pt`，只对 table reset 范围/顺序做短 ablation 或多 seed，而不是再直接重复同一 official-align 单 seed 长训。
+
+2026-06-09 11:43 CST table/reset ablation 后续诊断：
+
+- `/tmp/vbc_remote_ed25519` 丢失不是远端训练问题，而是本地把 SSH 私钥放在临时目录；`/tmp` 可能被清理或随会话生命周期消失。已改用稳定本地私有路径，不再依赖 `/tmp`。
+- 自动 watcher `vbc_tablereset_postprobe` 的失败原因是过度依赖 `tmux has-session -t vbc_teacher_ablate_g1`。训练 Python 已正常退出，日志也写出 exit code，但远端仍残留一个 tmux session 进程，导致 watcher 一直等待。
+- 后续 watcher 不应只看 tmux session 是否存在；更可靠的终止条件是同时检查训练日志里的 `Teacher training python exit code` 或 `Teacher training exited`，再确认没有 `train_multistate.py` 进程。
+- table/reset ablation 结果：短训 probe 有真实成功，但弱于 cubefallfix best；这说明“恢复上一轮 table/reset 逻辑”不是单独的充分修复项。当前更高价值方向仍是使用 cubefallfix best 作为候选，或做依赖栈/低层 checkpoint/seed 对齐。

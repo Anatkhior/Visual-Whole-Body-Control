@@ -151,3 +151,20 @@
   - `low-level` 采用 `pip install -e ... --no-deps`
 - 同步完成后已执行 `20_prepare_project.sh`，建立 `model_38000.pt` 软链接。
 - smoke 通过后，teacher 已进入 tmux 长训。
+<!-- source: session 2026-06-09 08:59-11:05 CST +0800, stable SSH key recovery -->
+
+稳定 SSH key 恢复原始记录摘要：
+
+- 问题：本地原远端私钥 `/tmp/vbc_remote_ed25519` 不存在，SSH 返回 `Warning: Identity file /tmp/vbc_remote_ed25519 not accessible`，随后远端拒绝 `publickey,password` 登录。
+- 原因判断：key 存在于 `/tmp`，属于临时目录，可能被系统清理、会话重启或清理脚本删除；外层 `agent-log/SSH.md` 曾明确标注该 key 是临时 key 且不保存 private key 内容。
+- 新 key：
+  - private：`/home/hjr/projects/2-Nexus/VBC/.secrets/ssh/vbc_remote_ed25519`
+  - public：`/home/hjr/projects/2-Nexus/VBC/.secrets/ssh/vbc_remote_ed25519.pub`
+  - fingerprint：`SHA256:iGk8myH+ND5nsSqqtncNvGx3dql6oNYgLpf5wKCgwK4`
+  - private 权限：`600`
+- 已用远端密码登录一次，将新公钥追加到远端 `~/.ssh/authorized_keys`。
+- 验证命令使用 `BatchMode=yes` 和新 key，远端返回 `SSH_OK`，时间 `2026-06-09 11:05:24 CST +0800`。
+- 私有外层文件已更新：
+  - `/home/hjr/projects/2-Nexus/VBC/remote-run/local/remote.env`
+  - `/home/hjr/projects/2-Nexus/VBC/agent-log/SSH.md`
+- 约束：不要把 private key 内容或明文密码写入仓库、日志或回复。

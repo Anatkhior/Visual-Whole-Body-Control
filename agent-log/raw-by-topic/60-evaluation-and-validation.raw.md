@@ -745,3 +745,41 @@ official-align teacher reset/table sweep 诊断原始摘要：
   - 2026-06-07 21:28:05 CST：进度 `154/60000`，GPU1 `9301MiB/24576MiB`、利用率 `93%`。
   - 2026-06-07 21:30:05 CST：进度 `262/60000`，GPU1 `9421MiB/24576MiB`、利用率 `93%`。
   - 2026-06-07 21:34:59 CST：进度 `515/60000`，最新严格 `Total success rate=5.432420686657975e-05`，`agent_500.pt` 已生成，大小约 `20M`。
+
+<!-- source: session 2026-06-09 11:09-11:43 CST +0800, table/reset manual probe -->
+
+table/reset ablation 手动 probe 原始记录摘要：
+
+- 自动 watcher：
+  - 脚本：`/tmp/vbc_watch_tablereset_probe.sh`
+  - tmux：`vbc_tablereset_postprobe`
+  - 结果：没有进入 probe，因为残留 `vbc_teacher_ablate_g1` tmux session 使 watcher 误判训练仍在运行。
+- 手动补跑：
+  - 脚本：`/tmp/vbc_manual_tablereset_probe.sh`
+  - tmux：`vbc_tablereset_manual_probe`
+  - 汇总日志：`/home/ubuntu/vbc-remote/remote-logs/teacher-tablereset-ablation-low37000-20260608-2341.manual-probe.log`
+  - `best_10000.pt` symlink：`.../checkpoints/best_10000.pt -> best_agent.pt`
+- `best_10000.pt -> best_agent.pt` probe：
+  - 日志：`/home/ubuntu/vbc-remote/remote-logs/teacher-tablereset-ablation-low37000-20260608-2341.probe-best_10000-manual1000.log`
+  - steps：`1000`
+  - num_envs：`34`
+  - `new_success=1`
+  - `new_episodes=10`
+  - `window_success_rate=0.1`
+  - `max_curr_height=0.37315961718559265`
+  - `min_curr_dist=0.008890852332115173`
+  - `max_lifted_object_count=1`
+- `agent_10000.pt` probe：
+  - 日志：`/home/ubuntu/vbc-remote/remote-logs/teacher-tablereset-ablation-low37000-20260608-2341.probe-agent_10000-manual1000.log`
+  - steps：`1000`
+  - num_envs：`34`
+  - `new_success=10`
+  - `new_episodes=61`
+  - `window_success_rate=0.16393442622950818`
+  - `max_curr_height=0.40742501616477966`
+  - `min_curr_dist=0.00670255534350872`
+  - `max_lifted_object_count=1`
+- 对比基线：
+  - latest official-align `best_44500.pt` 随机高度 probe：`0/10`
+  - 当前 cubefallfix best `best_agent.pt` 1000-step probe：`7/23≈0.3043478261`
+- 判断：table/reset ablation 有真实成功信号，但不足以超过当前 cubefallfix best。

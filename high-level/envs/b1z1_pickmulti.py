@@ -104,7 +104,7 @@ class B1Z1PickMulti(B1Z1Base):
         cube_start_pose = gymapi.Transform()
         cube_start_pose.p.x = table_start_pose.p.x + np.random.uniform(-0.1, 0.1)
         cube_start_pose.p.y = table_start_pose.p.y + np.random.uniform(-0.1, 0.1)
-        cube_start_pose.p.z = table_pos[-1] + obj_height
+        cube_start_pose.p.z = self.table_heights[i] + obj_height
         # cube_start_pose.r = quat_mul(gymapi.Quat.from_axis_angle(gymapi.Vec3(0, 0, 1), np.random.uniform(-np.pi, np.pi)), gymapi.Quat(*self.obj_orn[obj_idx]))
         cube_handle = self.gym.create_actor(env_ptr, obj_asset, cube_start_pose, "cube", col_group, col_filter, 2)
 
@@ -254,17 +254,17 @@ class B1Z1PickMulti(B1Z1Base):
         
         self._table_root_states[env_ids] = self._initial_table_root_states[env_ids]
         if self.table_heights_fix is None:
-            rand_heights = torch_rand_float(-0.25, 0.35, (len(env_ids), 1), device=self.device)
+            rand_heights = torch_rand_float(0, 0.5, (len(env_ids), 1), device=self.device)
         else:
-            rand_heights = torch.ones((len(env_ids), 1), device=self.device, dtype=torch.float)*self.table_heights_fix - self.table_dimz
+            rand_heights = torch.ones((len(env_ids), 1), device=self.device, dtype=torch.float)*self.table_heights_fix - self.table_dimz / 2
         
-        self._table_root_states[env_ids, 2] += rand_heights.squeeze(1)
+        self._table_root_states[env_ids, 2] = rand_heights.squeeze(1) - self.table_dimz / 2.0
         self.table_heights[env_ids] = self._table_root_states[env_ids, 2] + self.table_dimz / 2.0
     
     def _reset_actors(self, env_ids):
-        super()._reset_actors(env_ids)
         self._reset_table(env_ids)
         self._reset_objs(env_ids)
+        super()._reset_actors(env_ids)
 
         return
     

@@ -68,3 +68,9 @@ README 中建议的环境为 `conda` 环境 `b1z1`，Python 版本为 `3.8`，�
 - Isaac Gym 自带 `multiple_camera_envs.py` 验证显示：SSH 默认不带 `DISPLAY` 时 camera 示例会 core dump；显式 `DISPLAY=:0` 时可正常创建 camera handles。
 - student 视觉训练必须启用 camera sensors，且必须绑定 `DISPLAY=:0`。不要只设置 `--headless` 和 `CUDA_VISIBLE_DEVICES`；否则可能出现 camera handle `-1` 或 Isaac Gym 段错误。
 - `remote-run/remote/70_start_student_tmux.sh` 已支持 `STUDENT_DISPLAY`，建议后续 student 启动统一设置 `STUDENT_DISPLAY=:0`。
+2026-06-09 11:05:24 CST +0800 SSH key 恢复：
+
+- 原远端私钥放在 `/tmp/vbc_remote_ed25519`，该路径会被系统或会话清理，不适合作为长期连接凭据。
+- 已生成稳定本地 key：`/home/hjr/projects/2-Nexus/VBC/.secrets/ssh/vbc_remote_ed25519`。
+- 已将对应公钥追加到远端 `~/.ssh/authorized_keys`，并用 `BatchMode=yes` 验证无密码 SSH，远端返回 `SSH_OK`。
+- 私钥不在 `Visual-Whole-Body-Control` Git 仓库内，不应提交；私有外层 `remote-run/local/remote.env` 已把 `SSH_KEY` 更新为稳定路径。

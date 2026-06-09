@@ -211,6 +211,20 @@ teacher 未收敛根因复查记录：
 
 - 高置信度修复点已执行：`cube_falls` 恢复为 W&B 成功 run 保存代码中的官方容差口径。
 - 旧失败 teacher 的 termination probe 显示：
+
+<!-- source: session 2026-06-09 11:05-11:43 CST +0800, SSH and watcher diagnostics -->
+
+SSH 与 watcher 失败路径补充：
+
+- `/tmp/vbc_remote_ed25519` 丢失：
+  - 现象：`Warning: Identity file /tmp/vbc_remote_ed25519 not accessible`，随后 `Permission denied (publickey,password)`。
+  - 根因：私钥放在 `/tmp`，不是稳定持久路径。
+  - 修复：改用 `/home/hjr/projects/2-Nexus/VBC/.secrets/ssh/vbc_remote_ed25519`，并验证 `SSH_OK`。
+- `vbc_tablereset_postprobe` 自动 watcher 卡住：
+  - 现象：训练日志已到 `10000/10000` 且有 `Teacher training python exit code: 0`，GPU 空闲，但 watcher 每 180 秒继续记录 `still waiting`。
+  - 原因：远端残留 `tmux new-session -d -s vbc_teacher_ablate_g1 ...` 进程，`tmux has-session` 条件仍为真；watcher 只看 tmux session，未看训练日志 exit marker。
+  - 修复：停止该 watcher，手动启动 `vbc_tablereset_manual_probe`。
+  - 后续建议：watcher 结束条件应优先检查训练日志中的 `Teacher training python exit code`/`Teacher training exited`，再检查 `train_multistate.py` 进程，不能只依赖 tmux session。
   - 新官方口径 `cube_falls=6`。
   - 旧严格口径 `cube_below_table=163`。
   - 该差异解释了为什么旧训练中 `cube_falls` reset 过多；过严格判定会让 episode 过短，破坏抓取/抬升阶段学习。

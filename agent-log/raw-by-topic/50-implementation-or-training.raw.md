@@ -547,3 +547,34 @@ teacher 效果确认与后续动作：
   - 日志：`/home/ubuntu/vbc-remote/remote-logs/teacher-officialalign-low37000-20260607-2116.teacher.log`
   - 2026-06-07 21:25 CST 复查：tmux 和 `python train_multistate.py` 进程存在，GPU1 占用约 `5779MiB`，利用率 `92%`。
   - 2026-06-07 21:34:59 CST 复查：进度约 `515/60000`，最新严格 `Total success rate=5.432420686657975e-05`，`agent_500.pt` 已生成。
+
+<!-- source: session 2026-06-08 23:40 - 2026-06-09 11:43 CST +0800, table/reset ablation training -->
+
+table/reset 短 ablation 训练原始记录摘要：
+
+- 本地代码改动目标：保留官方 `cube_falls` 与低层 `publiccheckrollrew_37000.pt`，只恢复上一轮较强 cubefallfix 的 table/reset 逻辑：
+  - `_create_extra()` 物体初始 z：`cube_start_pose.p.z = self.table_heights[i] + obj_height`
+  - `_reset_table()` 随机范围：`torch_rand_float(0, 0.5, ...)`
+  - 固定桌高分支：`table_heights_fix - self.table_dimz / 2`
+  - 桌面 root z：`= rand_heights.squeeze(1) - self.table_dimz / 2.0`
+  - `_reset_actors()` 顺序：`_reset_table()`、`_reset_objs()`、`super()._reset_actors(env_ids)`
+- 本地验证：`python3 -m py_compile high-level/envs/b1z1_pickmulti.py` 退出码 `0`。
+- 同步策略：只用 `scp` 精确同步 `high-level/envs/b1z1_pickmulti.py`，没有使用带 `--delete` 的全量 `rsync`，避免误删远端已有 `publiccheckrollrew_37000.pt`。
+- 远端 smoke：
+  - `TEACHER_SMOKE_ENVS=10240`
+  - `TEACHER_SMOKE_TIMESTEPS=24`
+  - 日志：`/home/ubuntu/vbc-remote/remote-logs/teacher-smoke-10240env-24step-20260608-234017.log`
+  - 退出码：`0`
+- 短训：
+  - run：`teacher-tablereset-ablation-low37000-20260608-2341`
+  - tmux：`vbc_teacher_ablate_g1`
+  - GPU：`1`
+  - timesteps：`10000`
+  - 日志：`/home/ubuntu/vbc-remote/remote-logs/teacher-tablereset-ablation-low37000-20260608-2341.teacher.log`
+  - 2026-06-09 00:03 CST 进度约 `1086/10000`，严格成功率尾部约 `0.000919`。
+  - 2026-06-09 02:59:51 CST 训练正常退出，日志含 `Teacher training python exit code: 0`。
+  - 训练末尾严格 `Total success rate≈0.0195169127`。
+- checkpoint：
+  - `agent_1000.pt` 到 `agent_10000.pt` 均生成。
+  - `agent_10000.pt` 生成于 `2026-06-09 02:59:51 CST`，大小 `20622806` bytes。
+  - `best_agent.pt` 生成时间与 `agent_3000.pt` 附近对齐。
