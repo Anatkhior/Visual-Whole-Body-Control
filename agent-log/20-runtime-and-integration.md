@@ -74,3 +74,19 @@ README 中建议的环境为 `conda` 环境 `b1z1`，Python 版本为 `3.8`，�
 - 已生成稳定本地 key：`/home/hjr/projects/2-Nexus/VBC/.secrets/ssh/vbc_remote_ed25519`。
 - 已将对应公钥追加到远端 `~/.ssh/authorized_keys`，并用 `BatchMode=yes` 验证无密码 SSH，远端返回 `SSH_OK`。
 - 私钥不在 `Visual-Whole-Body-Control` Git 仓库内，不应提交；私有外层 `remote-run/local/remote.env` 已把 `SSH_KEY` 更新为稳定路径。
+
+2026-06-10 10:12:46 CST +0800 Isaac Sim 5.1.0 远端安装尝试：
+
+- 目标包：Isaac Sim standalone 5.1.0 Linux x86_64，官方下载文件名 `isaac-sim-standalone-5.1.0-linux-x86_64.zip`。
+- 远端 GPU/驱动：双 NVIDIA GeForce RTX 3090，driver `570.181`，单卡显存 `24576 MiB`。
+- 远端旧 `mihomo-party` TUN 路由会把普通流量导入坏的 `Mihomo` 接口；停止 GUI transient scope 后物理默认路由恢复到 `enp4s0`。
+- 新代理订阅已在远端通过 Sub-Store local subscription 转换和手工修正测试。不要在日志中记录订阅 URL、节点名、UUID、server、public key 或 short-id。
+- Sub-Store 转出的 76 个非 Reality/VLESS 节点对 NVIDIA 下载域名均失败；修正后的 VLESS/Reality-only 配置 `/tmp/mihomo-isaacsim-vless-fixed2/config.yaml` 通过 `mihomo -t`，并在临时 core 端口 `127.0.0.1:18190` 上找到可用节点。
+- 代理验证结果：NVIDIA zip `HEAD` 返回 `200`，1 MiB range 下载返回 `206`，文件大小 `1048576` bytes。
+- 远端下载结果：`/home/ubuntu/Downloads/isaac-sim-standalone-5.1.0-linux-x86_64.zip`，大小 `8768419777` bytes；`unzip -tq` 输出 `No errors detected in compressed data`。
+- 安装目录：`/home/ubuntu/isaacsim-5.1.0`，已解压完成，目录约 `17G`。
+- `post_install.sh` 已尝试运行，但失败于宿主系统库版本，未完成 Isaac Sim 运行时初始化。
+- 远端系统：Ubuntu `20.04.6 LTS`，glibc `2.31`，libstdc++ 最高 `GLIBCXX_3.4.28`。
+- Isaac Sim 5.1.0 当前二进制需求由实际错误确认：`kit/libcarb.so` 需要 `GLIBC_2.32`、`GLIBC_2.33`、`GLIBC_2.34`，以及 `GLIBCXX_3.4.29`、`GLIBCXX_3.4.30`。
+- 当前账号无免密 sudo，远端未安装 Docker、NVIDIA Container Toolkit、conda、apptainer/singularity、podman 或 proot；本轮不能直接升级系统或切换容器运行。
+- 可行下一步：提供 sudo/root 后升级到 Ubuntu 22.04/24.04，或安装 Docker + NVIDIA Container Toolkit 并在新 glibc 容器中运行 Isaac Sim；不建议在 Ubuntu 20.04 宿主上强行替换系统 glibc。

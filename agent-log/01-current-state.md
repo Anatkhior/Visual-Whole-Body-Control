@@ -1,10 +1,12 @@
 # 当前状态
 
-更新时间：2026-06-09 11:43:53 CST +0800。
+更新时间：2026-06-10 10:12:46 CST +0800。
 
-当前目标：继续诊断 teacher 成功率低的问题。最新 official-align teacher `teacher-officialalign-low37000-20260607-2116` 已完成且弱于上一轮候选；table/reset 短 ablation `teacher-tablereset-ablation-low37000-20260608-2341` 也已完成并完成独立 probe。
+当前目标：为后续迁移到 Isaac Sim 做远端准备。已在远端双 RTX 3090 机器上解决 Isaac Sim 5.1.0 standalone zip 的下载问题并完成压缩包校验；安装卡在宿主 Ubuntu 20.04 的 glibc/libstdc++ 版本过旧。
 
-当前结论：table/reset ablation 比 official-align 的随机高度 probe `0/10` 有改善，但仍弱于当前最强候选 `teacher-cubefallfix-low37000-20260604-1530/best_agent.pt`。因此暂不建议把 table/reset ablation 扩展成 `60000` 步长训，也不建议用它替代 cubefallfix best 训练 student。
+当前结论：代理和下载链路已经可用；Isaac Sim 5.1.0 zip 已下载到远端 `/home/ubuntu/Downloads/isaac-sim-standalone-5.1.0-linux-x86_64.zip`，大小 `8768419777` bytes，`unzip -tq` 通过。`/home/ubuntu/isaacsim-5.1.0` 已解压完成，目录约 `17G`。`post_install.sh` 失败于系统运行库：远端 Ubuntu `20.04.6` 的 glibc 为 `2.31`、libstdc++ 最高 `GLIBCXX_3.4.28`，而 Isaac Sim 5.1.0 的 `kit/libcarb.so` 需要 `GLIBC_2.32/2.33/2.34` 和 `GLIBCXX_3.4.29/3.4.30`。当前账号没有免密 sudo，远端也没有 Docker/NVIDIA Container Toolkit，不能在本轮直接升级系统或安装容器栈。
+
+上一条 VBC 训练结论仍有效：table/reset ablation 比 official-align 的随机高度 probe `0/10` 有改善，但仍弱于当前最强候选 `teacher-cubefallfix-low37000-20260604-1530/best_agent.pt`。因此暂不建议把 table/reset ablation 扩展成 `60000` 步长训，也不建议用它替代 cubefallfix best 训练 student。
 
 项目目录：
 

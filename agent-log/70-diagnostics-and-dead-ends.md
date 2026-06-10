@@ -209,3 +209,15 @@
 - 自动 watcher `vbc_tablereset_postprobe` 的失败原因是过度依赖 `tmux has-session -t vbc_teacher_ablate_g1`。训练 Python 已正常退出，日志也写出 exit code，但远端仍残留一个 tmux session 进程，导致 watcher 一直等待。
 - 后续 watcher 不应只看 tmux session 是否存在；更可靠的终止条件是同时检查训练日志里的 `Teacher training python exit code` 或 `Teacher training exited`，再确认没有 `train_multistate.py` 进程。
 - table/reset ablation 结果：短训 probe 有真实成功，但弱于 cubefallfix best；这说明“恢复上一轮 table/reset 逻辑”不是单独的充分修复项。当前更高价值方向仍是使用 cubefallfix best 作为候选，或做依赖栈/低层 checkpoint/seed 对齐。
+
+2026-06-10 10:12 CST Isaac Sim 5.1.0 安装诊断：
+
+- 旧 `mihomo-party` 主配置/TUN 是坏路径：启用时默认策略路由导向 `Mihomo` TUN，导致直连和代理测试混杂失败；停止该 transient scope 后默认路由回到物理网卡。
+- 新订阅不能直接当成全量 Mihomo 配置使用：Sub-Store 原始 Mihomo 输出包含 Reality/VLESS 字段，初始校验报 `invalid REALITY short ID`。原因不是原始 `sid` 非法；原始 `sid` 长度和 hex 规则均正常。
+- 有效修复：只取 13 个 VLESS/Reality 节点，规范化 Sub-Store 的 `_spider-x` 为 `spider-x`，并强制 `short-id` 以字符串形式写入 YAML。修正后配置 `/tmp/mihomo-isaacsim-vless-fixed2/config.yaml` 通过 `mihomo -t`。
+- 76 个非 Reality/VLESS 节点均不适合本次 NVIDIA 下载：表现为 HTTP CONNECT 已建立但 TLS 握手 `SSL_ERROR_SYSCALL`。
+- 修正后的 VLESS/Reality 节点中至少一个可访问 Isaac Sim 下载域名：NVIDIA zip `HEAD=200`，1 MiB range `206`；随后完整 zip 断点续传成功。
+- 已排除 zip 损坏：远端 zip 大小 `8768419777` bytes，`unzip -tq` 通过。
+- `post_install.sh` 失败不是下载或解压问题，而是宿主运行库问题：`kit/python/bin/python3` 加载 `kit/libcarb.so` 时要求 `GLIBC_2.32/2.33/2.34` 和 `GLIBCXX_3.4.29/3.4.30`，远端 Ubuntu 20.04 只有 glibc `2.31` 和 libstdc++ 到 `GLIBCXX_3.4.28`。
+- 不建议用替换系统 glibc 的方式修复；这是高风险系统级操作，且当前账号没有免密 sudo。较干净路线是升级远端 OS 或用 NVIDIA 容器栈提供新版用户态运行库。
+- 当前远端没有 Docker/NVIDIA Container Toolkit，且没有 conda、apptainer/singularity、podman、proot 等可直接绕开宿主 glibc 的工具；继续安装需要用户提供 sudo/root 或预装容器运行时。

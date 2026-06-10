@@ -54,6 +54,27 @@
   - `/home/ubuntu/vbc-remote/remote-logs/teacher-tablereset-ablation-low37000-20260608-2341.probe-agent_10000-manual1000.log`
 - 本机稳定 SSH key：`/home/hjr/projects/2-Nexus/VBC/.secrets/ssh/vbc_remote_ed25519`，不在 Git 仓库内，不应提交。
 
+## 2026-06-10 Isaac Sim 5.1.0 远端准备产物
+
+- 官方下载目标文件名：`isaac-sim-standalone-5.1.0-linux-x86_64.zip`
+- 远端完整 zip：`/home/ubuntu/Downloads/isaac-sim-standalone-5.1.0-linux-x86_64.zip`
+  - 大小：`8768419777` bytes
+  - 校验：`unzip -tq` 通过，输出 `No errors detected in compressed data`
+- 本地已有完整 zip：`/home/hjr/下载/isaac-sim-standalone-5.1.0-linux-x86_64.zip`
+  - 大小：`8768419777` bytes
+  - 早前已通过 `unzip -tq`
+- 远端解压目录：`/home/ubuntu/isaacsim-5.1.0`
+  - 大小：约 `17G`
+  - 状态：已解压；`post_install.sh` 未完成，阻塞于 Ubuntu 20.04 glibc/libstdc++ 过旧
+- 可用代理临时配置：`/tmp/mihomo-isaacsim-vless-fixed2/config.yaml`
+  - 端口：mixed `127.0.0.1:18190`，socks `127.0.0.1:18191`，redir `127.0.0.1:18192`
+  - controller：`127.0.0.1:19390`
+  - 注意：该目录可能含节点配置，不能提交或公开；不要复制节点名、UUID、server、public key、short-id 或订阅 URL 到日志。
+- 下载日志：`/tmp/isaacsim-download-vless-fixed2.log`
+- 下载 PID 文件：`/tmp/isaacsim-download-vless-fixed2.pid`，下载完成后进程已退出。
+- Sub-Store 临时订阅输出：`/tmp/substore-isaacsim-Mihomo.out`
+  - 注意：可能含节点信息，只能在远端临时诊断使用，不能提交。
+
 ## 项目关键文件
 
 - 顶层说明：`Visual-Whole-Body-Control/README.md`
